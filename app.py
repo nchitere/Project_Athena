@@ -7,7 +7,7 @@ import streamlit as st
 
 
 # Load the datasets
-kiva_loans = pd.read_csv('kiva_loans.csv')
+kiva_loans = pd.read_csv('kiva_modified_loans.csv')
 
 # Data processing
 ## check for missingness

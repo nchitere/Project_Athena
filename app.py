@@ -9,32 +9,24 @@ import streamlit as st
 # Load the datasets
 kiva_loans = pd.read_csv('C:/Users/HerbertChitere/Downloads/Athena/kiva_loans.csv')
 
+# Data processing
+## check for missingness
+kiva_loans.isnull().sum()
 
 # Analytics
-
+kiva_loans = kiva_loans.sample(n=100000, random_state=42)
 # Create a funding rate column 
 kiva_loans['funding_rate'] = kiva_loans['funded_amount' ]/kiva_loans['loan_amount'] 
 # Generate summary statistics for the funding rate column 
 kiva_loans[['funding_rate']].describe() 
 
-
-
-kiva_loans.columns
-
+kiva_loans['loan_amount'] = kiva_loans['loan_amount'].astype('int')
 # Kiva reach and impact data processing
-funding_rate = kiva_loans.groupby(['region','country','sector','borrower_genders', 'funded_time'])['funding_rate'].mean().reset_index()
-funding_rate.head()
+funding_rate = kiva_loans.groupby(['id','region','country','sector','borrower_genders','funded_time'])['funding_rate'].mean().reset_index()
 
-funding_rate.dtypes
-
-kiva_loans['funded_time'] = pd.to_datetime(funding_rate['funded_time'])
-
-
-
-# Kiva reach and impact data processing
-funding_rate = kiva_loans.groupby(['region','country','sector','borrower_genders', 'funded_time'])['funding_rate'].mean().reset_index()
-funding_rate.head()
-
+# Convert funded time to a datetime object
+funding_rate['funded_time'] = pd.to_datetime(funding_rate['funded_time'])
+funding_rate['id'] = funding_rate['id'].astype('int')
 # Sidebar for filtering
 st.sidebar.title("Filter Data")
 selected_country = st.sidebar.multiselect("Select Country", funding_rate['country'].unique())
@@ -43,6 +35,7 @@ selected_sector = st.sidebar.multiselect("Select Sector", funding_rate['sector']
 selected_gender = st.sidebar.multiselect("Select Gender", funding_rate['borrower_genders'].unique())
 start_date = st.sidebar.date_input("Start Date", value=funding_rate['funded_time'].min())
 end_date = st.sidebar.date_input("End Date", value=funding_rate['funded_time'].max())
+selected_id = st.sidebar.multiselect("Select id", funding_rate['id'].unique())
 
 # Sidebar for filtering
 st.sidebar.title("Filter Data")
@@ -64,8 +57,10 @@ all_genders = funding_rate['borrower_genders'].unique()
 selected_gender = st.sidebar.multiselect("Select Gender", all_genders, default=all_genders)
 
 # Date filter
-start_date = st.sidebar.date_input("Start Date", value=funding_rate['funded_time'].min())
-end_date = st.sidebar.date_input("End Date", value=funding_rate['funded_time'].max())
+# start_date = st.sidebar.date_input("Start Date", value=funding_rate['funded_time'].min())
+# end_date = st.sidebar.date_input("End Date", value=funding_rate['funded_time'].max())
+start_date = st.sidebar.date_input("Start Date", value=funding_rate['funded_time'].min(), key="start_date")
+end_date = st.sidebar.date_input("End Date", value=funding_rate['funded_time'].max(), key="end_date")
 
 # Filter the data based on selections
 filtered_data = funding_rate[(funding_rate['region'].isin(selected_region)) |
@@ -73,18 +68,20 @@ filtered_data = funding_rate[(funding_rate['region'].isin(selected_region)) |
                            (funding_rate['sector'].isin(selected_sector)) |
                            (funding_rate['borrower_genders'].isin(selected_gender)) |
                            (funding_rate['funded_time'].dt.date >= start_date) |
-                           (funding_rate['funded_time'].dt.date <= end_date)]
+                           (funding_rate['funded_time'].dt.date <= end_date)|
+                           (funding_rate['id'].isin(selected_id))]
 
 
 # Calculate KPIs
-total_loans = len(filtered_data)
-total_funding = filtered_data['funding_rate'].sum()
+count_of_loans = filtered_data['id'].nunique()
+total_funding = kiva_loans['loan_amount'].sum()
 avg_funding_rate = filtered_data['funding_rate'].mean()
 
 # Display KPIs
 st.title("Kiva Impact and Reach")
-st.metric("Total Loans", total_loans)
-st.metric("Total Funding", total_funding)
+# st.metric("Loan Count", count_of_loans)
+st.metric("Loan Count", str(count_of_loans))
+st.metric("Total Funding", int(total_funding))
 st.metric("Average Funding Rate", f"{avg_funding_rate:.2%}")
 
 
